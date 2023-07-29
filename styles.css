@@ -4,6 +4,29 @@ body {
     overflow: hidden;
 }
 
+@media screen and (max-width: 480px) {
+    body {
+      font-size: 14px;
+    }
+
+    header {
+      padding: 15px;
+    }
+
+    h2 {
+      font-size: 22px;
+    }
+  }
+
+  header img {
+    width: 300px;
+    /* Cambiar el ancho de la imagen */
+    height: 200px;
+    /* Cambiar la altura de la imagen */
+    border-radius: 15%;
+    /* Agregar bordes redondos */
+  }
+
 #map {
     position: absolute;
     top: 0;
