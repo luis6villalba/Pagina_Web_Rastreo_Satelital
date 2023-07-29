@@ -10,9 +10,46 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <div id="loading">
+        <h1>Explora el Universo en Tiempo Real</h1>
+    </div>
     <div id="cesiumContainer"></div>
     <div id="map"></div>
     <div class="satellite-list">
+    <script>
+        const viewer = new Cesium.Viewer('cesiumContainer', {
+          imageryProvider: new Cesium.TileMapServiceImageryProvider({
+            url: Cesium.buildModuleUrl("Assets/Textures/NaturalEarthII"),
+          }),
+          baseLayerPicker: true, geocoder: true, homeButton: true, infoBox: true,
+          navigationHelpButton: true, sceneModePicker: true
+        });
+        viewer.scene.globe.enableLighting = true
+
+        const ISS_TLE = 
+        `1 25544U 98067A   21121.52590485  .00001448  00000-0  34473-4 0  9997
+         2 25544  51.6435 213.5204 0002719 305.2287 173.7124 15.48967392281368`;
+        const satrec = satellite.twoline2satrec(
+          ISS_TLE.split('\n')[0].trim(), 
+          ISS_TLE.split('\n')[1].trim()
+        );
+        // Give SatelliteJS the TLE. Get back a longitude, latitude, height (km).
+        const date = new Date();
+        const positionAndVelocity = satellite.propagate(satrec, date);
+        const gmst = satellite.gstime(date);
+        const position = satellite.eciToGeodetic(positionAndVelocity.position, gmst);
+
+        console.log(position.longitude);// in radians
+        console.log(position.latitude);// in radians
+        console.log(position.height);// in km
+
+        const satellitePoint = viewer.entities.add({
+          position: Cesium.Cartesian3.fromRadians(
+            position.longitude, position.latitude, position.height * 1000
+          ),
+          point: { pixelSize: 5, color: Cesium.Color.RED }
+        });
+    </script>
         <h2>Lista de Satélites</h2>
         <ul id="satellite-list">
             <!-- La lista de satélites se llenará dinámicamente con JavaScript -->
