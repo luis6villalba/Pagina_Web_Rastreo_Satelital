@@ -1,3 +1,5 @@
+import sgp4 from './sgp4.js';
+
 document.addEventListener("DOMContentLoaded", async () => {
     const map = new Cesium.Viewer("map", {
         terrainProvider: Cesium.createWorldTerrain(),
