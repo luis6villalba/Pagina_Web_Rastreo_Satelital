@@ -34,11 +34,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     const map = new Cesium.Viewer("map", {
         terrainProvider: Cesium.createWorldTerrain(),
     toggleTrajectoriesBtn.onclick = () => {
-      showTrajectories = !showTrajectories;   
+      showTrajectories = !showTrajectories;
+
+      if (showTrajectories) {
+        tles.forEach((tle) => {
+          const positionsOverTime = new Cesium,SampledPositionProperty();
+          for (let i = 0; i < totalSeconds; i += timestepInSeconds) {
     });
 
   
-  
+  const satelliteTrajectories = {};
   const toggleTrajectoriesBtn = document.getElementById("toggleTrajectories");
   const speedSlider = document.getElementById("speed");
   const styleSelect = document.getElementById("style");
