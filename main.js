@@ -1,135 +1,124 @@
-  // // Inicializamos el mapa en una ubicación y nivel de zoom específicos
-  // var mymap = L.map('map').setView([51.505, -0.09], 13);
+ //El codigo crea una instancia del visor CesiumJS y lo inserta dentro del elemento HTML con el ID "map". Utiliza el proveedor de terreno "Cesium World Terrain" para mostrar un globo terráqueo detallado y en 3D. A partir de este punto, puedes agregar más funcionalidades y visualizaciones en el visor CesiumJS utilizando las diversas clases y funciones proporcionadas por la biblioteca. //
 
-  // // Añadimos una capa de mapa base de OpenStreetMap
-  // L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  //   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-  // }).addTo(mymap);
+console.log(satellite); // Asegúrate de que satellite.js esté accesible
+console.log(Cesium);    // Asegúrate de que Cesium esté accesible
 
-  // // Añadimos un marcador en una ubicación específica
-  // var marker = L.marker([51.5, -0.09]).addTo(mymap);
-
-  // // Añadimos un círculo en otra ubicación
-  // var circle = L.circle([51.508, -0.11], {
-  //   color: 'red',
-  //   fillColor: '#f03',
-  //   fillOpacity: 0.5,
-  //   radius: 500
-  // }).addTo(mymap);
-
-  // // Añadimos un polígono con coordenadas específicas
-  // var polygon = L.polygon([
-  //   [51.509, -0.08],
-  //   [51.503, -0.06],
-  //   [51.51, -0.047]
-  // ]).addTo(mymap);
-
-  // // Añadimos un popup a los marcadores y al polígono
-  // marker.bindPopup("¡Hola! Soy un marcador.").openPopup();
-  // circle.bindPopup("¡Hola! Soy un círculo.");
-  // polygon.bindPopup("¡Hola! Soy un polígono.");
-
-const PlatziSat_01 = 
-  `1 88888U 24001FA  23163.94096086  .00000000  00000-0  10000-4 0  9999
-  2 88888  97.5077 280.5424 0008220 228.6198 130.8530 15.11803180  1009`;
-const tl1 = PlatziSat_01.split('\n')[0].trim();
-const tl2 = PlatziSat_01.split('\n')[1].trim();
-console.log(tl1);
-console.log(tl2);
-
-const satrec = satellite.twoline2satrec(tl1,tl2);
-console.log(satrec);
-
-//Obtener la posición del satélite en la fecha dada
-const date = new Date();
-console.log(date);
-
-const positionAndVelocity = satellite.propagate(satrec, date);
-console.log(positionAndVelocity);
-
-const gmst = satellite.gstime(date);
-console.log(gmst);
-
-const position = satellite.eciToGeodetic(positionAndVelocity.position, gmst);
-
-console.log(position.longitude);// in radians
-console.log(position.latitude);// in radians
-console.log(position.height);// in km
-  
-//-----------------------------------------\
-
-// Inicialice el visor Cesium.
-// Luego inicializamos el visor. Aquí pasamos algunas opciones adicionales para deshabilitar la funcionalidad que requiere un token de acceso:
-const viewer = new Cesium.Viewer('cesiumContainer', {
-  imageryProvider: new Cesium.TileMapServiceImageryProvider({
-    url: Cesium.buildModuleUrl("Assets/Textures/NaturalEarthII"),
-  }),
-  baseLayerPicker: false, 
-  geocoder: false, 
-  homeButton: false, 
-  infoBox: false,
-  navigationHelpButton: false, 
-  sceneModePicker: false
-});
-viewer.scene.globe.enableLighting = true;
-
-//Finalmente, visualizaremos la posición del satélite como un punto rojo en el espacio:
-// const satellitePoint = viewer.entities.add({
-//   position: Cesium.Cartesian3.fromRadians(
-//     position.longitude, 
-//     position.latitude, 
-//     position.height * 1000
-//   ),
-//   point: { 
-//     pixelSize: 5, 
-//     color: Cesium.Color.RED }
-// });
-
-// Proporcione a SatelliteJS los TLE y una hora específica..
-// Recuperar una longitud, latitud, altura (km).
-// Vamos a generar una posición cada 10 segundos desde ahora hasta dentro de 6 segundos.
-const totalSeconds = 60 * 60 * 6;
-const timestepInSeconds = 10;
-const start = Cesium.JulianDate.fromDate(new Date());
-const stop = Cesium.JulianDate.addSeconds(start, totalSeconds, new Cesium.JulianDate());
-viewer.clock.startTime = start.clone();
-viewer.clock.stopTime = stop.clone();
-viewer.clock.currentTime = start.clone();
-viewer.timeline.zoomTo(start, stop);
-viewer.clock.multiplier = 40;
-viewer.clock.clockRange = Cesium.ClockRange.LOOP_STOP;
-
-//Creamos un SampledPositionProperty. Se trata de un objeto que contendrá muestras de posición a lo largo del tiempo e interpolará entre ellas
-const positionsOverTime = new Cesium.SampledPositionProperty();
-// Hacemos un bucle a través de cuantas muestras queramos obtener, y para cada muestra, construimos un objeto de tiempo, llamado JulianDate en CesiumJS, y una posición, y lo añadimos como una muestra::
-for (let i = 0; i < totalSeconds; i+= timestepInSeconds) {
-  const time = Cesium.JulianDate.addSeconds(start, i, new Cesium.JulianDate());
-  const jsDate = Cesium.JulianDate.toDate(time);
-
-  const positionAndVelocity = satellite.propagate(satrec, jsDate);
-  const gmst = satellite.gstime(jsDate);
-  const p   = satellite.eciToGeodetic(positionAndVelocity.position, gmst);
-  // ...Get position from satellite-js...
-  const position = Cesium.Cartesian3.fromRadians(p.longitude, p.latitude, p.height * 1000);
-  positionsOverTime.addSample(time, position);
-}
-// Por último, pasamos este objeto positionsOverTime a nuestro punto
-const satellitePoint = viewer.entities.add({
-  position: positionsOverTime,
-  point: { pixelSize: 6, color: Cesium.Color.YELLOW }
-});
-
-// El punto se moverá según se mueva la línea de tiempo de la parte inferior. Para fijar la cámara al punto en movimiento hacemos:
-viewer.trackedEntity = satellitePoint;
-
-let initialized = false;
-    viewer.scene.globe.tileLoadProgressEvent.addEventListener(() => {
-      if (!initialized && viewer.scene.globe.tilesLoaded === true) {
-        viewer.clock.shouldAnimate = true;
-        initialized = true;
-        viewer.scene.camera.zoomOut(7000000);
-        document.querySelector("#loading").classList.toggle('disappear', true)
-      }
+document.addEventListener("DOMContentLoaded", async () => {
+    const map = new Cesium.Viewer("map", {
+        terrainProvider: Cesium.createWorldTerrain(),
     });
 
-// 
+//este código realiza dos solicitudes HTTP asincrónicas a las API de Celestrak y TinyGS para obtener datos de TLE de satélites activos. Luego, combina los datos de ambas respuestas en un solo arreglo y muestra la lista de satélites en la página web. Además, realiza el seguimiento de los satélites en el visor CesiumJS utilizando los datos de TLE. Si ocurre algún error durante estas operaciones, se mostrará un mensaje de error en la consola.//
+
+    try {
+        const celestrakResponse = await fetch("https://www.celestrak.com/NORAD/elements/active.txt");
+        const celestrakData = await celestrakResponse.text();
+        const celestrakTLEs = parseTLEData(celestrakData);
+
+        const tinyGSResponse = await fetch("https://api.tinygs.com/v1/satellites/tle");
+        const tinyGSData = await tinyGSResponse.json();
+        const tinyGSTLEs = tinyGSData.data.map((tleData) => ({
+            name: tleData.name,
+            line1: tleData.tle_line1,
+            line2: tleData.tle_line2,
+        }));
+
+        const allTLEs = [...celestrakTLEs, ...tinyGSTLEs];
+
+        displaySatelliteList(allTLEs);
+        trackSatellites(allTLEs);
+    } catch (error) {
+        console.error("Error fetching TLE data:", error);
+    }
+});
+
+//esta función toma una cadena de texto que contiene datos de TLE de satélites y los convierte en una estructura de datos más organizada y fácil de manejar. Cada satélite se representa como un objeto con las propiedades name, line1 y line2, que contienen el nombre del satélite, la primera línea de datos de TLE y la segunda línea de datos de TLE, respectivamente. El resultado final es un arreglo que contiene todos estos objetos de TLE para cada satélite presente en los datos de entrada.//
+
+function parseTLEData(data) {
+    const lines = data.trim().split(/\r?\n/);
+    const tles = [];
+
+    for (let i = 0; i < lines.length; i += 3) {
+        const name = lines[i].trim();
+        const line1 = lines[i + 1].trim();
+        const line2 = lines[i + 2].trim();
+        tles.push({ name, line1, line2 });
+    }
+
+    return tles;
+}
+
+//esta función toma un arreglo de objetos que representan los satélites, extrae los nombres de los satélites y los muestra como elementos de lista en una lista no ordenada en la página web. Cada nombre de satélite se muestra en un elemento de lista (li), y todos los elementos de lista se agrupan en el elemento de lista no ordenada (ul) con el ID "satellite-list".//
+
+function displaySatelliteList(tles) {
+    const satelliteList = document.getElementById("satellite-list");
+    tles.forEach((tle) => {
+        const li = document.createElement("li");
+        li.textContent = tle.name;
+        satelliteList.appendChild(li);
+    });
+}
+
+//esta función toma un arreglo de objetos que representan los satélites, crea una entidad para cada satélite en el mapa 3D de Cesium, calcula la trayectoria del satélite utilizando datos de terreno y muestra su seguimiento en el globo terráqueo a lo largo del tiempo. La trayectoria se calcula interpolando las posiciones para suavizar el movimiento del satélite. Cada satélite se representará como una entidad en el mapa con su respectivo nombre y se rastreará durante un intervalo de tiempo específico.//
+
+function trackSatellites(tles) {
+    const viewer = Cesium.Viewer.instances[0];
+
+    tles.forEach((tle) => {
+        const satelliteEntity = viewer.entities.add({
+            name: tle.name,
+            availability: new Cesium.TimeIntervalCollection([new Cesium.TimeInterval({
+                start: Cesium.JulianDate.now(),
+                stop: Cesium.JulianDate.addDays(Cesium.JulianDate.now(), 1, new Cesium.JulianDate()),
+            })]),
+            position: new Cesium.SampledPositionProperty(),
+        });
+
+        Cesium.sampleTerrainMostDetailed(viewer.terrainProvider, [satelliteEntity]);
+        const position = satelliteEntity.position;
+
+        const promise = Cesium.sampleTerrainMostDetailed(viewer.terrainProvider, [satelliteEntity]);
+        Cesium.when(promise, () => {
+            const startTime = Cesium.JulianDate.now();
+            const stopTime = Cesium.JulianDate.addDays(startTime, 1, new Cesium.JulianDate());
+
+            const positions = getSatellitePositions(tle, startTime, stopTime);
+            positions.forEach((position) => {
+                const time = Cesium.JulianDate.addSeconds(startTime, position.time, new Cesium.JulianDate());
+                position.time = time;
+            });
+
+            position.setInterpolationOptions({
+                interpolationDegree: 5,
+                interpolationAlgorithm: Cesium.HermitePolynomialApproximation,
+            });
+            position.addSamples(positions);
+        });
+    });
+}
+
+//la función getSatellitePositions toma los elementos de línea de dos de un satélite, junto con un intervalo de tiempo, y calcula la trayectoria del satélite a lo largo de ese tiempo en coordenadas cartesianas. Estas posiciones se almacenan en un arreglo que se devolverá para su posterior uso en el rastreo del satélite en el mapa.//
+
+function getSatellitePositions(tle, startTime, stopTime) {
+    const positions = [];
+    const satrec = satellite.twoline2satrec(tle.line1, tle.line2);
+    const stepSizeSeconds = 60;
+
+    for (let seconds = 0; seconds <= Cesium.JulianDate.secondsDifference(stopTime, startTime); seconds += stepSizeSeconds) {
+        const currentTime = Cesium.JulianDate.addSeconds(startTime, seconds, new Cesium.JulianDate());
+        const positionAndVelocity = satellite.propagate(satrec, currentTime.getJulianDay(), currentTime.getSecondsOfDay());
+        const positionECI = positionAndVelocity.position;
+        const gmst = satellite.gstimeFromJulian(currentTime.getJulianDay());
+
+        const positionCartographic = satellite.eciToGeodetic(positionECI, gmst);
+        const positionCartesian = Cesium.Cartesian3.fromRadians(positionCartographic.longitude, positionCartographic.latitude, positionCartographic.height * 1000.0);
+
+        positions.push({
+            time: seconds,
+            position: positionCartesian,
+        });
+    }
+
+    return positions;
+}
+
