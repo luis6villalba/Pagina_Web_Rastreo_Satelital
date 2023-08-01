@@ -29,27 +29,14 @@
   // circle.bindPopup("¡Hola! Soy un círculo.");
   // polygon.bindPopup("¡Hola! Soy un polígono.");
 
-let showTrajectories = false;
 document.addEventListener("DOMContentLoaded", async () => {
     const map = new Cesium.Viewer("map", {
         terrainProvider: Cesium.createWorldTerrain(),
-    toggleTrajectoriesBtn.onclick = () => {
-      showTrajectories = !showTrajectories;
+      });
 
-      if (showTrajectories) {
-        tles.forEach((tle) => {
-          const positionsOverTime = new Cesium,SampledPositionProperty();
-          for (let i = 0; i < totalSeconds; i += timestepInSeconds) {
-    });
-
-  
-  const satelliteTrajectories = {};
   const toggleTrajectoriesBtn = document.getElementById("toggleTrajectories");
   const speedSlider = document.getElementById("speed");
   const styleSelect = document.getElementById("style");
-
-  toggleTrajectoriesBtn.onclick = () => {
-        // Aquí puedes implementar la lógica para mostrar u ocultar las trayectorias de los satélites
     };
 
 const PlatziSat_01 = 
