@@ -3,38 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>X-TRACK</title>
+    <title>Rastreo Satelital</title>
     <!-- <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
      crossorigin=""/> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/satellite.js/4.0.0/satellite.min.js"></script>
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.87/Build/Cesium/Cesium.js"></script>
     <link href="https://cesium.com/downloads/cesiumjs/releases/1.81/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
-
-     <link rel="stylesheet" href="./main.css">
+    
+    <link rel="stylesheet" href="./styles.css">
+    
 </head>
 <body>
     <div id="loading">
-        <h1>Loading...</h1>
+        <h1>"EXPLORA EL UNIVERSO"</h1>
     </div>
     <div id="cesiumContainer"></div>
-
-    <!-- Controles interactivos -->
-    <div id="controls">
-        <button id="toggleTrajectories">Mostrar/Ocultar Trayectorias</button>
-        <label for="speed">Velocidad de Simulación:</label>
-        <input type="range" id="speed" min="1" max="10" value="5">
-        <label for="style">Estilo de Visualización:</label>
-        <select id="style">
-            <option value="style1">Estilo 1</option>
-            <option value="style2">Estilo 2</option>
-        </select>
-    </div>
-
-    <!-- <div id="map">Aca va un mapa</div> -->
+    
+    <div id="map"></div>
     <!-- <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
      crossorigin=""></script> -->
-     <script src="https://cdnjs.cloudflare.com/ajax/libs/satellite.js/5.0.0/satellite.min.js"></script>
-     <script src="https://cesium.com/downloads/cesiumjs/releases/1.81/Build/Cesium/Cesium.js"></script>
-     <script src="./main.js"></script>
+    <div class="satellite-list">
+    <script>
+        const viewer = new Cesium.Viewer('cesiumContainer', {
+          imageryProvider: new Cesium.TileMapServiceImageryProvider({
+            url: Cesium.buildModuleUrl("Assets/Textures/NaturalEarthII"),
+          }),
+          baseLayerPicker: false,
+          geocoder: false,
+          homeButton: false,
+          infoBox: false,
+          navigationHelpButton: false,
+          sceneModePicker: false
+        });
+        viewer.scene.globe.enableLighting = true;
+
+        const ISS_TLE = 
+        `1 25544U 98067A   21121.52590485  .00001448  00000-0  34473-4 0  9997
+         2 25544  51.6435 213.5204 0002719 305.2287 173.7124 15.48967392281368`;
+        const satrec = satellite.twoline2satrec(
+          ISS_TLE.split('\n')[0].trim(), 
+          ISS_TLE.split('\n')[1].trim()
+        );
+        
+        // Give SatelliteJS the TLE. Get back a longitude, latitude, height (km).
+        const date = new Date();
+        const positionAndVelocity = satellite.propagate(satrec, date);
+        const gmst = satellite.gstime(date);
+        const position = satellite.eciToGeodetic(positionAndVelocity.position, gmst);
+
+        console.log(position.longitude);// in radians
+        console.log(position.latitude);// in radians
+        console.log(position.height);// in km
+
+        const satellitePoint = viewer.entities.add({
+          position: Cesium.Cartesian3.fromRadians(
+            position.longitude, position.latitude, position.height * 1000
+          ),
+          point: { pixelSize: 5, color: Cesium.Color.RED }
+        });
+    </script>
+        <h2>Lista de Satélites</h2>
+        <ul id="satellite-list">
+            <!-- La lista de satélites se llenará dinámicamente con JavaScript -->
+        </ul>
+    </div>
+    
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.87/Build/Cesium/Cesium.js"></script>
+    <script type="module" src="./script.js"></script>
 </body>
 </html>
