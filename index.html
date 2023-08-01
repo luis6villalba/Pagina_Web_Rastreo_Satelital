@@ -29,10 +29,14 @@
           imageryProvider: new Cesium.TileMapServiceImageryProvider({
             url: Cesium.buildModuleUrl("Assets/Textures/NaturalEarthII"),
           }),
-          baseLayerPicker: true, geocoder: true, homeButton: true, infoBox: true,
-          navigationHelpButton: true, sceneModePicker: true
+          baseLayerPicker: false,
+          geocoder: false,
+          homeButton: false,
+          infoBox: false,
+          navigationHelpButton: false,
+          sceneModePicker: false
         });
-        viewer.scene.globe.enableLighting = true
+        viewer.scene.globe.enableLighting = true;
 
         const ISS_TLE = 
         `1 25544U 98067A   21121.52590485  .00001448  00000-0  34473-4 0  9997
@@ -41,6 +45,7 @@
           ISS_TLE.split('\n')[0].trim(), 
           ISS_TLE.split('\n')[1].trim()
         );
+        
         // Give SatelliteJS the TLE. Get back a longitude, latitude, height (km).
         const date = new Date();
         const positionAndVelocity = satellite.propagate(satrec, date);
