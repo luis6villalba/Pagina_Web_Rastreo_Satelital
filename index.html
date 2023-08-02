@@ -3,41 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exploracion</title>
-    <!-- <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-     crossorigin=""/> -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/satellite.js/4.0.0/satellite.min.js"></script>
-    <script src="https://cesium.com/downloads/cesiumjs/releases/1.87/Build/Cesium/Cesium.js"></script>
+    <title>Rastreo Satelital</title>
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.81/Build/Cesium/Cesium.js"></script>
     <link href="https://cesium.com/downloads/cesiumjs/releases/1.81/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
-    
-    <link rel="stylesheet" href="./styles.css">
-    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/satellite.js/4.0.0/satellite.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div id="loading">
-        <h1>"EXPLORA EL UNIVERSO"</h1>
+        <h1>"EXPLORA EL UNIVERSO EN TIEMPO REAL"</h1>
     </div>
     <div id="cesiumContainer"></div>
-    
     <div id="map"></div>
-    <!-- <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-     crossorigin=""></script> -->
     <div class="satellite-list">
     <script>
         const viewer = new Cesium.Viewer('cesiumContainer', {
           imageryProvider: new Cesium.TileMapServiceImageryProvider({
             url: Cesium.buildModuleUrl("Assets/Textures/NaturalEarthII"),
           }),
-          baseLayerPicker: false,
-          geocoder: false,
-          homeButton: false,
-          infoBox: false,
-          navigationHelpButton: false,
-          sceneModePicker: false
+          baseLayerPicker: true, geocoder: true, homeButton: true, infoBox: true,
+          navigationHelpButton: true, sceneModePicker: true
         });
-        viewer.scene.globe.enableLighting = true;
+        viewer.scene.globe.enableLighting = true
 
         const ISS_TLE = 
         `1 25544U 98067A   21121.52590485  .00001448  00000-0  34473-4 0  9997
@@ -46,31 +33,63 @@
           ISS_TLE.split('\n')[0].trim(), 
           ISS_TLE.split('\n')[1].trim()
         );
-        
         // Give SatelliteJS the TLE. Get back a longitude, latitude, height (km).
-        const date = new Date();
-        const positionAndVelocity = satellite.propagate(satrec, date);
-        const gmst = satellite.gstime(date);
-        const position = satellite.eciToGeodetic(positionAndVelocity.position, gmst);
-
-        console.log(position.longitude);// in radians
-        console.log(position.latitude);// in radians
-        console.log(position.height);// in km
-
-        const satellitePoint = viewer.entities.add({
-          position: Cesium.Cartesian3.fromRadians(
-            position.longitude, position.latitude, position.height * 1000
-          ),
-          point: { pixelSize: 5, color: Cesium.Color.RED }
-        });
-    </script>
-        <h2>Lista de Satélites</h2>
-        <ul id="satellite-list">
-            <!-- La lista de satélites se llenará dinámicamente con JavaScript -->
-        </ul>
-    </div>
+        const totalSeconds = 60 * 60 * 6;
+    const timestepInSeconds = 10;
+    const start = Cesium.JulianDate.fromDate(new Date());
+    const stop = Cesium.JulianDate.addSeconds(start, totalSeconds, new Cesium.JulianDate());
+    viewer.clock.startTime = start.clone();
+    viewer.clock.stopTime = stop.clone();
+    viewer.clock.currentTime = start.clone();
+    viewer.timeline.zoomTo(start, stop);
+    viewer.clock.multiplier = 20;
+    viewer.clock.clockRange = Cesium.ClockRange.LOOP_STOP;
     
-    <script src="https://cesium.com/downloads/cesiumjs/releases/1.87/Build/Cesium/Cesium.js"></script>
-    <script type="module" src="./script.js"></script>
+    const positionsOverTime = new Cesium.SampledPositionProperty();
+    for (let i = 0; i < totalSeconds; i+= timestepInSeconds) {
+      const time = Cesium.JulianDate.addSeconds(start, i, new Cesium.JulianDate());
+      const jsDate = Cesium.JulianDate.toDate(time);
+
+      const positionAndVelocity = satellite.propagate(satrec, jsDate);
+      const gmst = satellite.gstime(jsDate);
+      const p   = satellite.eciToGeodetic(positionAndVelocity.position, gmst);
+
+      const position = Cesium.Cartesian3.fromRadians(p.longitude, p.latitude, p.height * 1000);
+      positionsOverTime.addSample(time, position);
+    }
+    
+    // Visualize the satellite with a red dot.///
+   /// const satellitePoint = viewer.entities.add({///
+    ///  position: positionsOverTime,///
+   ///   point: { pixelSize: 5, color: Cesium.Color.RED }///
+  ///  });///
+
+     const satelliteSymbol = {
+       image: 'https://es.pngtree.com/freepng/satellite-icon-design-template-vector-isolated_4101999.html', // Aquí debes proporcionar la ruta de la imagen del símbolo de satélite
+       scale: 0.5, // Escala de la imagen del símbolo
+       color: Cesium.Color.RED, // Color de la imagen del símbolo
+       horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
+       verticalOrigin: Cesium.VerticalOrigin.CENTER,
+      };
+
+    const satelliteEntity = viewer.entities.add({
+      name: 'Satélite 1',
+      position: Cesium.Cartesian3.fromDegrees(-75.0, 40.0, 100000.0),
+      billboard: satelliteSymbol, // Usamos el objeto "satelliteSymbol" como configuración para el símbolo de satélite
+    });
+
+    // Set the camera to follow the satellite 
+    viewer.trackedEntity = satelliteSymbol;
+    // Wait for globe to load then zoom out     
+    let initialized = false;
+    viewer.scene.globe.tileLoadProgressEvent.addEventListener(() => {
+      if (!initialized && viewer.scene.globe.tilesLoaded === true) {
+        viewer.clock.shouldAnimate = true;
+        initialized = true;
+        viewer.scene.camera.zoomOut(14000000);
+        document.querySelector("#loading").classList.toggle('disappear', true)
+      }
+    });
+  </script>
 </body>
 </html>
